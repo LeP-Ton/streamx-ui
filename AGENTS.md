@@ -24,6 +24,8 @@
 
 **双通道 + 自动降级**：展示页优先 WebSocket（实时），连不上/断开自动降级 HTTP 轮询（`src/lib/client.ts`）。这是应对「抖音直播助手 WebSocket 支持未知」的关键设计。
 
+**跨域已处理，勿重复怀疑**：配置页(5173)→本地服务(3001) 是跨域，服务端已配 CORS（`Access-Control-Allow-Origin: *`，见 `server/index.js` 请求头设置），预检通过。WebSocket 本身不受同源策略限制。早期排查曾误判跨域导致 POST 失败，真因是 `broadcast` 引用未导入的 `ws`（已修复，见 commit afa3e10）。
+
 ## 技术选型
 
 Vite + React 18 + TypeScript + ws。无数据库，配置内存态。
