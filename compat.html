@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>streamx-ui · 兼容性自测</title>
+    <style>
+      body {
+        margin: 0;
+        padding: 24px;
+        font-family: system-ui, -apple-system, 'PingFang SC', sans-serif;
+        background: #111;
+        color: #eee;
+      }
+      h1 {
+        font-size: 20px;
+      }
+      .hint {
+        color: #aaa;
+        font-size: 13px;
+        margin-bottom: 16px;
+        line-height: 1.6;
+      }
+      .item {
+        padding: 10px 12px;
+        margin: 6px 0;
+        border-radius: 6px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-size: 14px;
+        background: #2a2a2a;
+      }
+      .badge {
+        font-size: 12px;
+        padding: 2px 8px;
+        border-radius: 10px;
+        font-weight: 600;
+        min-width: 56px;
+        text-align: center;
+      }
+      .ok {
+        background: #1b5e20;
+        color: #a5d6a7;
+      }
+      .fail {
+        background: #b71c1c;
+        color: #ef9a9a;
+      }
+      .wait {
+        background: #e65100;
+        color: #ffcc80;
+      }
+      .detail {
+        color: #999;
+        font-size: 12px;
+        margin-left: auto;
+      }
+      .log {
+        margin-top: 16px;
+        font-family: monospace;
+        font-size: 12px;
+        color: #9cdcfe;
+        white-space: pre-wrap;
+        max-height: 200px;
+        overflow: auto;
+        background: #1a1a1a;
+        padding: 10px;
+        border-radius: 6px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>streamx-ui 兼容性自测</h1>
+    <div class="hint">
+      把这个页面地址填进直播软件的「网页/浏览器源」并保持加载 10-30 分钟。<br />
+      页面会自动检测：JavaScript 执行、本地 HTTP 拉取、WebSocket 连接与保持、定时器是否被断。<br />
+      <strong>需先启动本地服务：</strong>终端运行 <code>npm run dev:server</code>
+    </div>
+    <div id="results"></div>
+    <div class="log" id="log"></div>
+    <script>
+      // 自测脚本：所有检测在浏览器源环境内执行，结果直接渲染在页面上
+      var HTTP_BASE = 'http://127.0.0.1:3001'
+      var WS_URL = 'ws://127.0.0.1:3001/ws'
+      var results = []
+      var logEl = document.getElementById('log')
+      var resultsEl = document.getElementById('results')
+
+      function log(msg) {
+        var t = new Date().toLocaleTimeString()
+        logEl.textContent += '[' + t + '] ' + msg + '\n'
+        logEl.scrollTop = logEl.scrollHeight
+      }
+
+      function render() {
+        resultsEl.innerHTML = results
+          .map(function (r) {
+            var cls = r.status === 'pass' ? 'ok' : r.status === 'fail' ? 'fail' : 'wait'
+            var label = r.status === 'pass' ? '通过' : r.status === 'fail' ? '失败' : '检测中'
+            return (
+              '<div class="item"><span class="badge ' +
+              cls +
+              '">' +
+              label +
+              '</span><span>' +
+              r.name +
+              '</span><span class="detail">' +
+              (r.detail || '') +
+              '</span></div>'
+            )
+          })
+          .join('')
+      }
+
+      function setItem(name, status, detail) {
+        var existing = results.find(function (r) {
+          return r.name === name
+        })
+        if (existing) {
+          existing.status = status
+          existing.detail = detail || ''
+        } else {
+          results.push({ name: name, status: status, detail: detail || '' })
+        }
+        render()
+      }
+
+      // 1. JS 执行
+      setItem('JavaScript 执行', 'pass', '脚本已运行')
+      log('JS 执行正常')
+
+      // 2. fetch 本地服务
+      setItem('本地 HTTP 拉取 (fetch /config)', 'wait', '请求中…')
+      fetch(HTTP_BASE + '/config')
+        .then(function (res) {
+          if (res.ok) {
+            setItem('本地 HTTP 拉取 (fetch /config)', 'pass', 'HTTP ' + res.status)
+            log('fetch /config 成功')
+          } else {
+            setItem('本地 HTTP 拉取 (fetch /config)', 'fail', 'HTTP ' + res.status)
+            log('fetch /config 返回 ' + res.status)
+          }
+        })
+        .catch(function (err) {
+          setItem('本地 HTTP 拉取 (fetch /config)', 'fail', String(err))
+          log('fetch /config 失败：' + err)
+        })
+
+      // 3. WebSocket 连接与保持
+      setItem('WebSocket 连接', 'wait', '连接中…')
+      var wsConnectedAt = null
+      var wsMessageCount = 0
+      try {
+        var ws = new WebSocket(WS_URL)
+        ws.onopen = function () {
+          wsConnectedAt = Date.now()
+          setItem('WebSocket 连接', 'pass', '已连接')
+          log('WebSocket 已连接')
+        }
+        ws.onmessage = function () {
+          wsMessageCount++
+          setItem('WebSocket 消息保持', 'pass', '已收到 ' + wsMessageCount + ' 条')
+        }
+        ws.onclose = function () {
+          if (wsConnectedAt) {
+            var sec = Math.round((Date.now() - wsConnectedAt) / 1000)
+            setItem('WebSocket 连接', 'fail', '已断开，存活 ' + sec + 's')
+            log('WebSocket 断开，存活 ' + sec + 's')
+          } else {
+            setItem('WebSocket 连接', 'fail', '连接被拒/立即断开')
+            log('WebSocket 连接失败')
+          }
+        }
+        ws.onerror = function () {
+          log('WebSocket onerror')
+        }
+      } catch (e) {
+        setItem('WebSocket 连接', 'fail', '不支持：' + e)
+      }
+
+      // 4. 定时器存活检测（沙箱可能在 N 分钟后掐掉定时器）
+      setItem('定时器存活 (每秒心跳)', 'wait', '0s')
+      var tick = 0
+      setInterval(function () {
+        tick++
+        setItem('定时器存活 (每秒心跳)', 'pass', tick + 's')
+        if (tick % 30 === 0) log('心跳 ' + tick + 's，WebSocket 消息数 ' + wsMessageCount)
+      }, 1000)
+
+      // 5. 首次渲染
+      render()
+    </script>
+  </body>
+</html>

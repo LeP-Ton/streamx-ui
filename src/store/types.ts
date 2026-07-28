@@ -1,0 +1,124 @@
+// streamx-ui 配置模型
+// 配置页编辑这份结构 -> 推送到本地服务 -> 展示页按此渲染。
+// 字段保持精简可扩展，新增组件类型时在下面追加 union 分支即可。
+
+/** 位置与尺寸，单位均为像素，原点为展示页左上角 */
+export interface LayerTransform {
+  x: number
+  y: number
+  width: number
+  height: number
+  /** 0-100，透明度百分比 */
+  opacity: number
+  /** 0-360，旋转角度 */
+  rotation: number
+}
+
+/** 图层类型：每加一种直播元素，在此 union 扩一个分支 */
+export type LayerType = 'text' | 'image' | 'popup' | 'effect' | 'ticker'
+
+/** 文字图层：标题、字幕、频道名、关注引导等 */
+export interface TextLayer {
+  id: string
+  type: 'text'
+  name: string
+  transform: LayerTransform
+  text: string
+  fontSize: number
+  color: string
+  /** 是否带跑马灯滚动 */
+  scroll: boolean
+}
+
+/** 图片图层：头像、logo、背景图 */
+export interface ImageLayer {
+  id: string
+  type: 'image'
+  name: string
+  transform: LayerTransform
+  src: string
+  /** 是否圆形裁剪（头像常用） */
+  circle: boolean
+}
+
+/** 弹窗图层：点赞飘心、关注提示、礼物特效等临时弹出 */
+export interface PopupLayer {
+  id: string
+  type: 'popup'
+  name: string
+  transform: LayerTransform
+  text: string
+  color: string
+  /** 弹出持续时间（毫秒） */
+  duration: number
+  /** 触发模式：manual=手动触发，auto=按间隔自动弹 */
+  trigger: 'manual' | 'auto'
+  /** auto 模式下的弹出间隔（毫秒） */
+  interval: number
+}
+
+/** 特效图层：粒子、光晕等氛围特效 */
+export interface EffectLayer {
+  id: string
+  type: 'effect'
+  name: string
+  transform: LayerTransform
+  /** 特效样式：粒子/光晕/烟花等，先用字符串占位，后续扩展枚举 */
+  effect: string
+  color: string
+}
+
+/** 跑马灯/滚动条图层：底部滚动文字 */
+export interface TickerLayer {
+  id: string
+  type: 'ticker'
+  name: string
+  transform: LayerTransform
+  text: string
+  color: string
+  bgColor: string
+  speed: number
+}
+
+export type Layer =
+  | TextLayer
+  | ImageLayer
+  | PopupLayer
+  | EffectLayer
+  | TickerLayer
+
+/** 整份直播配置 */
+export interface StreamConfig {
+  /** 画布尺寸，需与直播软件浏览器源设置的分辨率一致 */
+  canvas: {
+    width: number
+    height: number
+  }
+  layers: Layer[]
+}
+
+export const DEFAULT_CONFIG: StreamConfig = {
+  canvas: { width: 1920, height: 1080 },
+  layers: [
+    {
+      id: 'welcome-text',
+      type: 'text',
+      name: '频道标题',
+      transform: { x: 80, y: 60, width: 800, height: 80, opacity: 100, rotation: 0 },
+      text: '欢迎来到直播间',
+      fontSize: 48,
+      color: '#ffffff',
+      scroll: false,
+    },
+    {
+      id: 'ticker-bottom',
+      type: 'ticker',
+      name: '底部滚动条',
+      transform: { x: 0, y: 1000, width: 1920, height: 60, opacity: 100, rotation: 0 },
+      text: '点击关注，不错过每一场直播 · 每晚 8 点准时开播',
+      color: '#ffffff',
+      bgColor: 'rgba(0,0,0,0.5)',
+      speed: 60,
+    },
+  ],
+}

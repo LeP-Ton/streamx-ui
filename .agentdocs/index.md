@@ -1,0 +1,13 @@
+# streamx-ui 变更文档索引
+
+> 根索引：检索时先读本文件，按需读对应变更文档。不全量检索 `workflow/`。
+
+## workflow/
+
+- [20260728181600-init-scaffold.md](workflow/20260728181600-init-scaffold.md) — 初始化项目骨架：双入口 Vite + React + TS、本地 WebSocket 服务（含 HTTP 兜底）、配置页/展示页/图层组件、兼容性自测页
+
+## 读取场景
+
+- 想了解某次改动的「为什么」→ 读对应变更文档的「背景与目标」「约束与原则」。
+- 想回滚某次改动 → 用 `git log --oneline` 定位 commit，`git revert`（见全局提示词 3.2）。
+- 想了解项目当前全貌 → 读根目录 `AGENTS.md`。

@@ -1,0 +1,28 @@
+{
+  "name": "streamx-ui",
+  "version": "0.1.0",
+  "description": "纯前端直播 UI 系统：可配置直播内容、特效、弹窗，通过本地服务实时推送到直播软件的浏览器源",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "dev": "concurrently -n server,web -c blue,green \"npm:dev:server\" \"npm:dev:web\"",
+    "dev:web": "vite",
+    "dev:server": "node server/index.js",
+    "build": "vite build",
+    "preview": "vite preview",
+    "start": "concurrently -n server,web -c blue,green \"npm:dev:server\" \"npm:dev:web\""
+  },
+  "dependencies": {
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.12",
+    "@types/react-dom": "^18.3.1",
+    "@vitejs/plugin-react": "^4.3.4",
+    "concurrently": "^9.1.0",
+    "typescript": "^5.6.3",
+    "vite": "^5.4.11",
+    "ws": "^8.18.0"
+  }
+}
