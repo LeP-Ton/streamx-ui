@@ -5,6 +5,7 @@
 ## workflow/
 
 - [20260728181600-init-scaffold.md](workflow/20260728181600-init-scaffold.md) — 初始化项目骨架：双入口 Vite + React + TS、本地 WebSocket 服务（含 HTTP 兜底）、配置页/展示页/图层组件、兼容性自测页
+- [20260728201500-hotkey-trigger.md](workflow/20260728201500-hotkey-trigger.md) — 快捷键触发 UI：uiohook-napi 全局钩子（跨平台，Windows 主目标）、hotkeys 配置、trigger 广播、HotkeyPanel 录制、/test-trigger 测试端点
 
 ## 读取场景
 

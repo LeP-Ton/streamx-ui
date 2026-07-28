@@ -112,7 +112,7 @@ export function LayerList({ layers, selectedId, onSelect, onAdd, onRemove }: Pro
 }
 
 const asideStyle: React.CSSProperties = {
-  width: 220,
+  flex: 1,
   background: '#252526',
   display: 'flex',
   flexDirection: 'column',

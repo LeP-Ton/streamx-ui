@@ -5,6 +5,7 @@ import { pushConfig } from '@/lib/client'
 import { Preview } from './Preview'
 import { LayerList } from './LayerList'
 import { LayerEditor } from './LayerEditor'
+import { HotkeyPanel } from './HotkeyPanel'
 
 // 配置面板：左侧图层列表 + 中间实时预览 + 右侧选中图层属性编辑
 export function Editor() {
@@ -59,6 +60,10 @@ export function Editor() {
     if (selectedId === id) setSelectedId(next.layers[0]?.id ?? null)
   }
 
+  const updateHotkeys = (hotkeys: StreamConfig['hotkeys']) => {
+    update({ ...config, hotkeys })
+  }
+
   return (
     <div style={pageStyle}>
       <header style={headerStyle}>
@@ -73,13 +78,20 @@ export function Editor() {
       </header>
 
       <div style={bodyStyle}>
-        <LayerList
-          layers={config.layers}
-          selectedId={selectedId}
-          onSelect={setSelectedId}
-          onAdd={addLayer}
-          onRemove={removeLayer}
-        />
+        <div style={asideWrapStyle}>
+          <HotkeyPanel
+            layers={config.layers}
+            hotkeys={config.hotkeys}
+            onChange={updateHotkeys}
+          />
+          <LayerList
+            layers={config.layers}
+            selectedId={selectedId}
+            onSelect={setSelectedId}
+            onAdd={addLayer}
+            onRemove={removeLayer}
+          />
+        </div>
         <Preview config={config} selectedId={selectedId} onSelect={setSelectedId} />
         <LayerEditor layer={selected} onChange={(patch) => selected && updateLayer(selected.id, patch)} />
       </div>
@@ -110,5 +122,14 @@ const bodyStyle: React.CSSProperties = {
   display: 'flex',
   gap: 1,
   background: '#333',
+  overflow: 'hidden',
+}
+
+// 左侧栏容器：快捷键面板 + 图层列表纵向排列
+const asideWrapStyle: React.CSSProperties = {
+  display: 'flex',
+  flexDirection: 'column',
+  width: 220,
+  background: '#252526',
   overflow: 'hidden',
 }

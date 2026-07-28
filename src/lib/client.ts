@@ -41,8 +41,16 @@ export type SubscribeStatus = 'ws' | 'polling' | 'disconnected'
 export interface SubscribeOptions {
   onConfig: (config: StreamConfig) => void
   onStatus?: (status: SubscribeStatus) => void
+  /** 收到快捷键触发事件时回调（来自本地服务的全局键盘钩子） */
+  onTrigger?: (event: TriggerEvent) => void
   /** 降级轮询间隔（毫秒），默认 2000 */
   pollInterval?: number
+}
+
+export interface TriggerEvent {
+  layerId: string
+  action: 'show' | 'hide' | 'toggle' | 'popup'
+  combo: string
 }
 
 /**
@@ -51,7 +59,7 @@ export interface SubscribeOptions {
  * 返回一个取消订阅函数。
  */
 export function subscribeConfig(opts: SubscribeOptions): () => void {
-  const { onConfig, onStatus, pollInterval = 2000 } = opts
+  const { onConfig, onStatus, onTrigger, pollInterval = 2000 } = opts
   let stopped = false
   let ws: WebSocket | null = null
   let pollTimer: ReturnType<typeof setInterval> | null = null
@@ -105,6 +113,12 @@ export function subscribeConfig(opts: SubscribeOptions): () => void {
           if (msg.payload && Object.keys(msg.payload).length > 0) {
             onConfig(msg.payload as StreamConfig)
           }
+        } else if (msg.type === 'trigger') {
+          onTrigger?.({
+            layerId: msg.layerId,
+            action: msg.action,
+            combo: msg.combo,
+          })
         }
       } catch {
         /* 忽略非法消息 */

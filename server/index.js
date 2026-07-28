@@ -10,6 +10,11 @@
 // 本服务只在本地监听 127.0.0.1，不对外暴露。
 import { createServer } from 'node:http'
 import { WebSocketServer, WebSocket } from 'ws'
+import { createRequire } from 'node:module'
+
+// server 用 ESM，但 hotkey 模块用 CommonJS（require uiohook 更稳），这里桥接
+const require = createRequire(import.meta.url)
+const hotkey = require('./hotkey.cjs')
 
 const PORT = 3001
 const HOST = '127.0.0.1'
@@ -17,6 +22,9 @@ const HOST = '127.0.0.1'
 // 当前配置（内存态）。首次启动为空对象，等待配置页写入。
 // 进程重启会丢失，配置页会在连接时把当前配置 POST 上来同步。
 let currentConfig = {}
+
+// 快捷键钩子状态：running / unavailable
+let hotkeyStatus = 'unavailable'
 
 const server = createServer((req, res) => {
   // 统一 CORS：配置页与展示页都跑在 5173，需允许跨域到 3001
@@ -38,7 +46,26 @@ const server = createServer((req, res) => {
 
   if (req.method === 'GET' && req.url === '/health') {
     res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' })
-    res.end(JSON.stringify({ ok: true, clients: wss.clients.size }))
+    res.end(JSON.stringify({ ok: true, clients: wss.clients.size, hotkey: hotkeyStatus }))
+    return
+  }
+
+  // 测试端点：模拟一次快捷键触发（macOS 钩子收不到真按键时用它验证前端响应）
+  // 正式直播时由全局钩子触发，无需调用此端点。
+  if (req.method === 'POST' && req.url === '/test-trigger') {
+    const chunks = []
+    req.on('data', (c) => chunks.push(c))
+    req.on('end', () => {
+      try {
+        const { layerId, action = 'popup', combo = 'TEST' } = JSON.parse(Buffer.concat(chunks).toString('utf8'))
+        broadcast({ type: 'trigger', layerId, action, combo })
+        res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' })
+        res.end(JSON.stringify({ ok: true }))
+      } catch (err) {
+        res.writeHead(400, { 'Content-Type': 'application/json; charset=utf-8' })
+        res.end(JSON.stringify({ ok: false, error: err.message }))
+      }
+    })
     return
   }
 
@@ -53,6 +80,8 @@ const server = createServer((req, res) => {
       const body = Buffer.concat(chunks).toString('utf8')
       try {
         currentConfig = JSON.parse(body)
+        // 同步快捷键绑定到钩子模块
+        hotkey.setBindings(currentConfig.hotkeys)
         broadcast({ type: 'config:update', payload: currentConfig })
         res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' })
         res.end(JSON.stringify({ ok: true }))
@@ -98,4 +127,19 @@ server.listen(PORT, HOST, () => {
   console.log(`  WebSocket  ws://${HOST}:${PORT}/ws   （实时推送）`)
   console.log(`  HTTP       http://${HOST}:${PORT}/config （兜底拉取）`)
   console.log(`  健康检查   http://${HOST}:${PORT}/health`)
+
+  // 启动全局快捷键钩子。失败会降级，不影响 HTTP/WS。
+  // Windows 开箱即用；macOS 需辅助功能权限且可能被 Sonoma 拦截。
+  hotkey.setOnTrigger(({ layerId, action, combo }) => {
+    broadcast({ type: 'trigger', layerId, action, combo })
+    console.log(`[hotkey] 触发: ${combo} -> ${action}(${layerId})`)
+  })
+  hotkey.setOnStatus((status) => {
+    hotkeyStatus = status
+    console.log(`[hotkey] 状态: ${status}`)
+    if (status === 'unavailable') {
+      console.log('  快捷键不可用：Windows 无需配置；macOS 需辅助功能权限')
+    }
+  })
+  hotkey.start()
 })

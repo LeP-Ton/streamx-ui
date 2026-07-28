@@ -1,28 +1,54 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { PopupLayer } from '@/store/types'
 import { transformToStyle } from '../LayerView'
 
-// 弹窗图层：
-// - manual 模式：由配置页触发显示（通过配置变更携带触发时间戳），这里监听触发
-// - auto 模式：按 interval 自动弹出，持续 duration 后消失
-// 初版仅实现 auto 模式与初始可见，manual 触发后续扩展
-export function PopupView({ layer }: { layer: PopupLayer }) {
-  const [visible, setVisible] = useState(true)
+interface Props {
+  layer: PopupLayer
+  /** 触发序号：每次快捷键触发 +1，驱动 manual 弹窗重新弹出 */
+  triggerCount: number
+}
 
+// 弹窗图层：
+// - manual 模式：默认隐藏，收到 triggerCount 变化时弹出，持续 duration 后消失
+// - auto 模式：按 interval 自动循环弹出
+export function PopupView({ layer, triggerCount }: Props) {
+  const [visible, setVisible] = useState(false)
+  const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const lastTrigger = useRef(0)
+
+  // 通用：弹出并设定自动消失
+  const pop = () => {
+    setVisible(true)
+    if (hideTimer.current) clearTimeout(hideTimer.current)
+    hideTimer.current = setTimeout(() => setVisible(false), layer.duration)
+  }
+
+  // manual 模式：监听 triggerCount 变化触发弹出
+  useEffect(() => {
+    if (layer.trigger !== 'manual') return
+    if (triggerCount > lastTrigger.current) {
+      lastTrigger.current = triggerCount
+      pop()
+    }
+    return () => {
+      if (hideTimer.current) clearTimeout(hideTimer.current)
+    }
+  }, [triggerCount, layer.trigger, layer.duration])
+
+  // auto 模式：按 interval 自动循环
   useEffect(() => {
     if (layer.trigger !== 'auto') return
-    let showTimer: ReturnType<typeof setTimeout>
+    let interval: ReturnType<typeof setInterval>
     const cycle = () => {
       setVisible(true)
-      showTimer = setTimeout(() => {
-        setVisible(false)
-      }, layer.duration)
+      if (hideTimer.current) clearTimeout(hideTimer.current)
+      hideTimer.current = setTimeout(() => setVisible(false), layer.duration)
     }
     cycle()
-    const interval = setInterval(cycle, layer.interval)
+    interval = setInterval(cycle, layer.interval)
     return () => {
-      clearTimeout(showTimer)
       clearInterval(interval)
+      if (hideTimer.current) clearTimeout(hideTimer.current)
     }
   }, [layer.trigger, layer.duration, layer.interval])
 

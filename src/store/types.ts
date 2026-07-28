@@ -55,6 +55,8 @@ export interface PopupLayer {
   trigger: 'manual' | 'auto'
   /** auto 模式下的弹出间隔（毫秒） */
   interval: number
+  /** manual 模式下绑定的快捷键，如 "Ctrl+Shift+1"，留空则只能通过 UI 手动触发 */
+  hotkey?: string
 }
 
 /** 特效图层：粒子、光晕等氛围特效 */
@@ -87,6 +89,16 @@ export type Layer =
   | EffectLayer
   | TickerLayer
 
+/** 快捷键绑定：按组合键触发指定图层的显隐/弹出 */
+export interface HotkeyBinding {
+  /** 组合键字符串，如 "Ctrl+Shift+1"，修饰键用 Ctrl/Alt/Shift/Meta，主键用按键名 */
+  combo: string
+  /** 触发的目标图层 id */
+  layerId: string
+  /** 触发动作：show=显示，hide=隐藏，toggle=切换，popup=弹窗弹出一次 */
+  action: 'show' | 'hide' | 'toggle' | 'popup'
+}
+
 /** 整份直播配置 */
 export interface StreamConfig {
   /** 画布尺寸，需与直播软件浏览器源设置的分辨率一致 */
@@ -95,10 +107,13 @@ export interface StreamConfig {
     height: number
   }
   layers: Layer[]
+  /** 全局快捷键绑定，由本地服务的键盘钩子捕获后广播给展示页 */
+  hotkeys: HotkeyBinding[]
 }
 
 export const DEFAULT_CONFIG: StreamConfig = {
   canvas: { width: 1920, height: 1080 },
+  hotkeys: [],
   layers: [
     {
       id: 'welcome-text',

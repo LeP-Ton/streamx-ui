@@ -18,14 +18,24 @@ export function transformToStyle(t: LayerTransform): React.CSSProperties {
   }
 }
 
-export function LayerView({ layer }: { layer: Layer }) {
+interface LayerViewProps {
+  layer: Layer
+  /** 被快捷键 hide/toggle 隐藏时为 true，覆盖图层默认显隐 */
+  hidden?: boolean
+  /** popup 图层的触发序号，变化时驱动重新弹出 */
+  triggerCount?: number
+}
+
+export function LayerView({ layer, hidden, triggerCount }: LayerViewProps) {
+  if (hidden) return null
+
   switch (layer.type) {
     case 'text':
       return <TextView layer={layer} />
     case 'image':
       return <ImageView layer={layer} />
     case 'popup':
-      return <PopupView layer={layer} />
+      return <PopupView layer={layer} triggerCount={triggerCount ?? 0} />
     case 'effect':
       return <EffectView layer={layer} />
     case 'ticker':
