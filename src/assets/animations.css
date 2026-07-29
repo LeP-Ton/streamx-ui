@@ -31,3 +31,13 @@
     opacity: 0.9;
   }
 }
+
+/* 弹幕：从右侧画外飘入，移动到左侧画外。距离 = 100% + 自身宽度，用 calc 在组件内设定 */
+@keyframes sx-danmaku-fly {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(var(--sx-fly-distance));
+  }
+}

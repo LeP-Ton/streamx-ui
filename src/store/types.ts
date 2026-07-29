@@ -99,6 +99,27 @@ export interface HotkeyBinding {
   action: 'show' | 'hide' | 'toggle' | 'popup'
 }
 
+/** 剧本弹幕条目：按时机自动发出的假弹幕，用于直播冷启动氛围营造 */
+export interface ScriptDanmaku {
+  id: string
+  /** 弹幕文本 */
+  text: string
+  /** 弹幕颜色 */
+  color: string
+  /** 剧本启动后多少毫秒发出第一条 */
+  delay: number
+  /** 发送间隔：0=只发一次，>0=按间隔循环发送 */
+  interval: number
+}
+
+/** 剧本人气系统：按时间表自动推送弹幕 */
+export interface ScriptConfig {
+  /** 总开关 */
+  enabled: boolean
+  /** 弹幕条目 */
+  danmakus: ScriptDanmaku[]
+}
+
 /** 整份直播配置 */
 export interface StreamConfig {
   /** 画布尺寸，需与直播软件浏览器源设置的分辨率一致 */
@@ -109,11 +130,21 @@ export interface StreamConfig {
   layers: Layer[]
   /** 全局快捷键绑定，由本地服务的键盘钩子捕获后广播给展示页 */
   hotkeys: HotkeyBinding[]
+  /** 剧本人气系统，由本地服务按时间表广播弹幕 */
+  script: ScriptConfig
 }
 
 export const DEFAULT_CONFIG: StreamConfig = {
   canvas: { width: 1920, height: 1080 },
   hotkeys: [],
+  script: {
+    enabled: false,
+    danmakus: [
+      { id: 'dm-1', text: '主播今天讲什么', color: '#ffffff', delay: 3000, interval: 0 },
+      { id: 'dm-2', text: '关注了关注了', color: '#ffd54f', delay: 8000, interval: 0 },
+      { id: 'dm-3', text: '上次没赶上，这次终于赶上了', color: '#ffffff', delay: 15000, interval: 0 },
+    ],
+  },
   layers: [
     {
       id: 'welcome-text',

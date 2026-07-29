@@ -43,8 +43,16 @@ export interface SubscribeOptions {
   onStatus?: (status: SubscribeStatus) => void
   /** 收到快捷键触发事件时回调（来自本地服务的全局键盘钩子） */
   onTrigger?: (event: TriggerEvent) => void
+  /** 收到剧本弹幕事件时回调（来自本地服务的剧本调度器） */
+  onDanmaku?: (event: DanmakuEvent) => void
   /** 降级轮询间隔（毫秒），默认 2000 */
   pollInterval?: number
+}
+
+export interface DanmakuEvent {
+  text: string
+  color: string
+  id: string
 }
 
 export interface TriggerEvent {
@@ -59,7 +67,7 @@ export interface TriggerEvent {
  * 返回一个取消订阅函数。
  */
 export function subscribeConfig(opts: SubscribeOptions): () => void {
-  const { onConfig, onStatus, onTrigger, pollInterval = 2000 } = opts
+  const { onConfig, onStatus, onTrigger, onDanmaku, pollInterval = 2000 } = opts
   let stopped = false
   let ws: WebSocket | null = null
   let pollTimer: ReturnType<typeof setInterval> | null = null
@@ -119,6 +127,8 @@ export function subscribeConfig(opts: SubscribeOptions): () => void {
             action: msg.action,
             combo: msg.combo,
           })
+        } else if (msg.type === 'danmaku') {
+          onDanmaku?.({ text: msg.text, color: msg.color, id: msg.id })
         }
       } catch {
         /* 忽略非法消息 */

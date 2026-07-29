@@ -3,6 +3,24 @@ import type { StreamConfig } from '@/store/types'
 import { DEFAULT_CONFIG } from '@/store/types'
 import { subscribeConfig, type SubscribeStatus } from '@/lib/client'
 import { LayerView } from '@/components/LayerView'
+import { DanmakuLayer, emitDanmaku } from '@/components/DanmakuLayer'
+
+// 计算画布等比缩放，铺满视口。直播软件浏览器源会按其设置分辨率取景，
+// 但本地预览时浏览器窗口通常小于 1920x1080，需缩放才能完整看到全部图层。
+function useFitScale(width: number, height: number) {
+  const [scale, setScale] = useState(1)
+  useEffect(() => {
+    const update = () => {
+      const sx = window.innerWidth / width
+      const sy = window.innerHeight / height
+      setScale(Math.min(sx, sy))
+    }
+    update()
+    window.addEventListener('resize', update)
+    return () => window.removeEventListener('resize', update)
+  }, [width, height])
+  return scale
+}
 
 // 直播展示页：订阅本地服务配置并渲染图层。
 // 透明背景，画布按 canvas 尺寸渲染，由直播软件浏览器源按比例缩放铺满。
@@ -43,11 +61,13 @@ export function Overlay() {
       onConfig: setConfig,
       onStatus: setStatus,
       onTrigger: handleTrigger,
+      onDanmaku: (d) => emitDanmaku(d),
     })
     return unsub
   }, [handleTrigger])
 
   const { width, height } = config.canvas
+  const scale = useFitScale(width, height)
 
   return (
     <div
@@ -56,6 +76,7 @@ export function Overlay() {
         width,
         height,
         transformOrigin: 'top left',
+        transform: `scale(${scale})`,
       }}
     >
       {config.layers.map((layer) => {
@@ -69,6 +90,9 @@ export function Overlay() {
           />
         )
       })}
+
+      {/* 剧本弹幕层：独立于配置图层，由 danmaku 事件驱动 */}
+      <DanmakuLayer canvasWidth={width} />
 
       {/* 连接状态指示：仅当未稳定连接时显示，便于在直播软件里排查 */}
       {status !== 'ws' && (

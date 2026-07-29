@@ -6,6 +6,7 @@ import { Preview } from './Preview'
 import { LayerList } from './LayerList'
 import { LayerEditor } from './LayerEditor'
 import { HotkeyPanel } from './HotkeyPanel'
+import { ScriptPanel } from './ScriptPanel'
 
 // 配置面板：左侧图层列表 + 中间实时预览 + 右侧选中图层属性编辑
 export function Editor() {
@@ -64,6 +65,10 @@ export function Editor() {
     update({ ...config, hotkeys })
   }
 
+  const updateScript = (script: StreamConfig['script']) => {
+    update({ ...config, script })
+  }
+
   return (
     <div style={pageStyle}>
       <header style={headerStyle}>
@@ -79,6 +84,7 @@ export function Editor() {
 
       <div style={bodyStyle}>
         <div style={asideWrapStyle}>
+          <ScriptPanel script={config.script} onChange={updateScript} />
           <HotkeyPanel
             layers={config.layers}
             hotkeys={config.hotkeys}

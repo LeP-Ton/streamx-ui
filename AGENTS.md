@@ -34,10 +34,12 @@ Vite + React 18 + TypeScript + ws。无数据库，配置内存态。
 
 - `server/index.js`：本地服务，WebSocket(`/ws`) + HTTP(`/config`、`/health`、`/test-trigger`)，仅监听 127.0.0.1。
 - `server/hotkey.cjs`：全局快捷键钩子（uiohook-napi）。注意是 `.cjs`——package.json 是 ESM，钩子模块用 CommonJS 故用 .cjs 扩展名。**跨平台**：Windows 开箱即用；macOS 需辅助功能权限且 Sonoma 可能静默拦截未签名二进制，故做了降级——钩子失败不致命，HTTP/WS 照常工作。
-- `src/lib/client.ts`：服务客户端。`pushConfig` 写入，`subscribeConfig` 订阅（含 WS→轮询降级与重连、`onTrigger` 收快捷键触发）。
-- `src/store/types.ts`：配置数据模型。**新增直播元素类型时在此 union 扩分支**，并在 `LayerView` 与 `LayerEditor` 补对应渲染/编辑。`StreamConfig.hotkeys` 是快捷键绑定，`PopupLayer.hotkey` 是图层级快捷键字段。
-- `src/overlay/`：展示页，渲染图层 + 响应 trigger（popup 弹出、show/hide/toggle 显隐覆盖）。
-- `src/editor/`：配置面板。左侧含 `HotkeyPanel`（快捷键录制与绑定）+ 图层列表，中预览，右属性编辑。
+- `server/script.cjs`：剧本人气系统调度器，按 `script` 配置的 delay/interval 定时广播 danmaku 事件。`.cjs` 同上。内容中立，不审查文本。
+- `src/lib/client.ts`：服务客户端。`pushConfig` 写入，`subscribeConfig` 订阅（含 WS→轮询降级与重连、`onTrigger` 快捷键触发、`onDanmaku` 剧本弹幕）。
+- `src/store/types.ts`：配置数据模型。**新增直播元素类型时在此 union 扩分支**，并在 `LayerView` 与 `LayerEditor` 补对应渲染/编辑。`StreamConfig.hotkeys` 是快捷键绑定，`StreamConfig.script` 是剧本配置。
+- `src/overlay/`：展示页，渲染图层 + 响应 trigger（popup 弹出、show/hide/toggle 显隐覆盖）+ 渲染剧本弹幕。**画布按视口等比缩放**（`useFitScale`），否则 1920x1080 画布在本地浏览器右下方会超出视口不可见。
+- `src/editor/`：配置面板。左侧含 `ScriptPanel`（剧本弹幕编辑）+ `HotkeyPanel`（快捷键录制与绑定）+ 图层列表，中预览，右属性编辑。
+- `src/components/DanmakuLayer.tsx`：弹幕渲染层。**用 Web Animations API（element.animate）驱动 DOM**，不要用 CSS 变量+keyframes——React 内联 style 设 CSS 变量不可靠，曾导致弹幕停在画布外不可见。
 - `src/components/layers/`：各图层渲染组件。`PopupView` 支持 manual（triggerCount 触发）与 auto 两种模式。
 - `compat.html`：直播软件兼容性自测页（JS/fetch/WebSocket/定时器），用于实测抖音直播助手等闭源软件的能力。
 

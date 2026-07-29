@@ -12,9 +12,10 @@ import { createServer } from 'node:http'
 import { WebSocketServer, WebSocket } from 'ws'
 import { createRequire } from 'node:module'
 
-// server 用 ESM，但 hotkey 模块用 CommonJS（require uiohook 更稳），这里桥接
+// server 用 ESM，但 hotkey/script 模块用 CommonJS，这里桥接
 const require = createRequire(import.meta.url)
 const hotkey = require('./hotkey.cjs')
+const script = require('./script.cjs')
 
 const PORT = 3001
 const HOST = '127.0.0.1'
@@ -46,7 +47,7 @@ const server = createServer((req, res) => {
 
   if (req.method === 'GET' && req.url === '/health') {
     res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' })
-    res.end(JSON.stringify({ ok: true, clients: wss.clients.size, hotkey: hotkeyStatus }))
+    res.end(JSON.stringify({ ok: true, clients: wss.clients.size, hotkey: hotkeyStatus, script: script.isRunning() }))
     return
   }
 
@@ -82,6 +83,8 @@ const server = createServer((req, res) => {
         currentConfig = JSON.parse(body)
         // 同步快捷键绑定到钩子模块
         hotkey.setBindings(currentConfig.hotkeys)
+        // 同步剧本调度器
+        script.update(currentConfig.script)
         broadcast({ type: 'config:update', payload: currentConfig })
         res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' })
         res.end(JSON.stringify({ ok: true }))
@@ -142,4 +145,11 @@ server.listen(PORT, HOST, () => {
     }
   })
   hotkey.start()
+
+  // 剧本人气系统：到点广播弹幕事件
+  script.setOnDanmaku(({ text, color, id }) => {
+    broadcast({ type: 'danmaku', text, color, id })
+  })
+  // 用默认配置初始化调度（配置页首次推送会覆盖）
+  script.update(currentConfig.script || { enabled: false, danmakus: [] })
 })
